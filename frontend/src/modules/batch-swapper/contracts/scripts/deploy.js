@@ -63,33 +63,6 @@ BatchSwapper deployed to: ${contractAddress}
 Chain ID: ${chainId}
 ===================================================================
 
-*** IMPORTANT NEXT STEPS FOR FRONTEND INTEGRATION ***
-
-1.  UPDATE CONTRACT ADDRESS:
-    Copy the address above and paste it into:
-    'batch-swapper/utils/contractAddresses.ts'
-    under the 'CONTRACT_ADDRESSES' object for chainId: ${chainId}.
-
-    Example:
-    export const CONTRACT_ADDRESSES: Record<number, { BATCH_SWAPPER: Address }> = {
-        // ... other chains
-        ${chainId}: { BATCH_SWAPPER: '${contractAddress}' as Address },
-        // ...
-    };
-
-2.  UPDATE CONTRACT ABI (IF CONTRACT CHANGED):
-    If you modified 'BatchSwapper.sol' (added/removed functions/events),
-    you need to update the 'BATCH_SWAPPER_ABI' in:
-    'batch-swapper/utils/contractAddresses.ts'
-
-    To get the latest ABI:
-    a. Run: 'npx hardhat compile' (in your 'contracts' directory)
-    b. Open: 'batch-swapper/contracts/artifacts/contracts/BatchSwapper.sol/BatchSwapper.json'
-    c. Copy the entire 'abi' array from this JSON file.
-    d. Paste it into the 'BATCH_SWAPPER_ABI' constant in 'batch-swapper/utils/contractAddresses.ts'.
-       Ensure it ends with 'as const;' for Viem/Wagmi type inference.
-
-===================================================================
 `);
 }
 
