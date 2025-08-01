@@ -1,10 +1,10 @@
 {
   "_format": "hh-sol-cache-2",
   "files": {
-    "/Users/harshit/Desktop/UnityDefi_ETH Global/1nsync/frontend/src/modules/batch-swapper/contracts/contracts/BatchSwapper.sol": {
-      "lastModificationDate": 1753892832298,
-      "contentHash": "e311cb5bfdc45717032a887a7a47866c",
-      "sourceName": "contracts/BatchSwapper.sol",
+    "/Users/harshit/Desktop/UnityDefi_ETH Global/1nsync/frontend/src/modules/batch-swapper/contracts/contracts/BatchSwapperV2.sol": {
+      "lastModificationDate": 1754049700897,
+      "contentHash": "6152cf082916e3bda2662493df2b5d42",
+      "sourceName": "contracts/BatchSwapperV2.sol",
       "solcConfig": {
         "version": "0.8.19",
         "settings": {
@@ -38,11 +38,11 @@
         "^0.8.19"
       ],
       "artifacts": [
-        "BatchSwapper"
+        "BatchSwapperV2"
       ]
     },
     "/Users/harshit/Desktop/UnityDefi_ETH Global/1nsync/frontend/src/modules/batch-swapper/contracts/node_modules/@openzeppelin/contracts/access/Ownable.sol": {
-      "lastModificationDate": 1753892738488,
+      "lastModificationDate": 1754023508432,
       "contentHash": "5a20b2cad87ddb61c7a3a6af21289e28",
       "sourceName": "@openzeppelin/contracts/access/Ownable.sol",
       "solcConfig": {
@@ -79,7 +79,7 @@
       ]
     },
     "/Users/harshit/Desktop/UnityDefi_ETH Global/1nsync/frontend/src/modules/batch-swapper/contracts/node_modules/@openzeppelin/contracts/security/ReentrancyGuard.sol": {
-      "lastModificationDate": 1753892738489,
+      "lastModificationDate": 1754023508588,
       "contentHash": "1535f8c0c68463f8c1b5239f7584e71f",
       "sourceName": "@openzeppelin/contracts/security/ReentrancyGuard.sol",
       "solcConfig": {
@@ -114,7 +114,7 @@
       ]
     },
     "/Users/harshit/Desktop/UnityDefi_ETH Global/1nsync/frontend/src/modules/batch-swapper/contracts/node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol": {
-      "lastModificationDate": 1753892738484,
+      "lastModificationDate": 1754023508169,
       "contentHash": "df36f7051335cd1e748b1b6463b7fdd3",
       "sourceName": "@openzeppelin/contracts/token/ERC20/IERC20.sol",
       "solcConfig": {
@@ -149,7 +149,7 @@
       ]
     },
     "/Users/harshit/Desktop/UnityDefi_ETH Global/1nsync/frontend/src/modules/batch-swapper/contracts/node_modules/@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol": {
-      "lastModificationDate": 1753892738489,
+      "lastModificationDate": 1754023508625,
       "contentHash": "1b5d667d3740d866eca0352758e59827",
       "sourceName": "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol",
       "solcConfig": {
@@ -188,7 +188,7 @@
       ]
     },
     "/Users/harshit/Desktop/UnityDefi_ETH Global/1nsync/frontend/src/modules/batch-swapper/contracts/node_modules/@openzeppelin/contracts/utils/Context.sol": {
-      "lastModificationDate": 1753892738469,
+      "lastModificationDate": 1754023507379,
       "contentHash": "f07feb4a44b1a4872370da5aa70e8e46",
       "sourceName": "@openzeppelin/contracts/utils/Context.sol",
       "solcConfig": {
@@ -223,7 +223,7 @@
       ]
     },
     "/Users/harshit/Desktop/UnityDefi_ETH Global/1nsync/frontend/src/modules/batch-swapper/contracts/node_modules/@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol": {
-      "lastModificationDate": 1753892738484,
+      "lastModificationDate": 1754023508198,
       "contentHash": "525fcdad8d171312933f47baf01d1ed8",
       "sourceName": "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol",
       "solcConfig": {
@@ -258,7 +258,7 @@
       ]
     },
     "/Users/harshit/Desktop/UnityDefi_ETH Global/1nsync/frontend/src/modules/batch-swapper/contracts/node_modules/@openzeppelin/contracts/utils/Address.sol": {
-      "lastModificationDate": 1753892738468,
+      "lastModificationDate": 1754023507348,
       "contentHash": "211ffd288c1588ba8c10eae668ca3c66",
       "sourceName": "@openzeppelin/contracts/utils/Address.sol",
       "solcConfig": {
@@ -290,6 +290,119 @@
       ],
       "artifacts": [
         "Address"
+      ]
+    },
+    "/Users/harshit/Desktop/UnityDefi_ETH Global/1nsync/frontend/src/modules/batch-swapper/contracts/node_modules/@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol": {
+      "lastModificationDate": 1754023508178,
+      "contentHash": "909ab67fc5c25033fe6cd364f8c056f9",
+      "sourceName": "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol",
+      "solcConfig": {
+        "version": "0.8.19",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../IERC20.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "IERC20Metadata"
+      ]
+    },
+    "/Users/harshit/Desktop/UnityDefi_ETH Global/1nsync/frontend/src/modules/batch-swapper/contracts/node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol": {
+      "lastModificationDate": 1754023507748,
+      "contentHash": "3ae5166c6827a9cf1a7a462d1632b464",
+      "sourceName": "@openzeppelin/contracts/token/ERC20/ERC20.sol",
+      "solcConfig": {
+        "version": "0.8.19",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./IERC20.sol",
+        "./extensions/IERC20Metadata.sol",
+        "../../utils/Context.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "ERC20"
+      ]
+    },
+    "/Users/harshit/Desktop/UnityDefi_ETH Global/1nsync/frontend/src/modules/batch-swapper/contracts/contracts/MockERC20.sol": {
+      "lastModificationDate": 1754053922012,
+      "contentHash": "8e6bf09f6fef65e22383e3df84f6460a",
+      "sourceName": "contracts/MockERC20.sol",
+      "solcConfig": {
+        "version": "0.8.19",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/token/ERC20/ERC20.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.19"
+      ],
+      "artifacts": [
+        "MockERC20"
       ]
     }
   }

@@ -1,0 +1,23 @@
+{
+  "contract": "BatchSwapperV2",
+  "version": "2.0.0",
+  "address": "0xf84DA33B69Fb92F28997B1aB9Ad755d4E4E14D06",
+  "network": {
+    "name": "Base",
+    "chainId": 8453,
+    "router": "0x111111125421cA6dc452d289314280a0f8842A65",
+    "explorer": "https://basescan.org"
+  },
+  "deployment": {
+    "deployer": "0xd1c9BD2a14b00C99803B5Ded4571814D227566C7",
+    "owner": "0xd1c9BD2a14b00C99803B5Ded4571814D227566C7",
+    "txHash": "0x0dd4e9422293be14b826b05043836ef72dc4404c93b9ac0f7a11b6149d286a63",
+    "blockNumber": 33632249,
+    "timestamp": "2025-08-01T13:10:47.814Z"
+  },
+  "verification": {
+    "explorerUrl": "https://basescan.org/address/0xf84DA33B69Fb92F28997B1aB9Ad755d4E4E14D06",
+    "maxSwapsPerBatch": "10",
+    "routerAddress": "0x111111125421cA6dc452d289314280a0f8842A65"
+  }
+}

@@ -6,15 +6,20 @@
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",
-    "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia",
-    "deploy:mainnet": "hardhat run scripts/deploy.js --network mainnet",
-    "deploy:polygon": "hardhat run scripts/deploy.js --network polygon",
-    "deploy:arbitrum": "hardhat run scripts/deploy.js --network arbitrum",
-    "deploy:base": "hardhat run scripts/deploy.js --network base",
-    "deploy:optimism": "hardhat run scripts/deploy.js --network optimism",
+    "test:backend": "hardhat test test/BatchSwapperV2.test.js --network base",
+    "deploy:ethereum": "hardhat run scripts/deploy-v2.js --network mainnet",
+    "deploy:base": "hardhat run scripts/deploy-v2.js --network base",
+    "deploy:optimism": "hardhat run scripts/deploy-v2.js --network optimism", 
+    "deploy:arbitrum": "hardhat run scripts/deploy-v2.js --network arbitrum",
+    "deploy:polygon": "hardhat run scripts/deploy-v2.js --network polygon",
+    "deploy:sepolia": "hardhat run scripts/deploy-v2.js --network sepolia",
+    "extract:abi": "mkdir -p artifacts/abis && cat artifacts/contracts/BatchSwapperV2.sol/BatchSwapperV2.json | jq '.abi' > artifacts/abis/BatchSwapperV2.json",
+    "verify:ethereum": "hardhat verify --network mainnet",
+    "verify:base": "hardhat verify --network base",
+    "verify:optimism": "hardhat verify --network optimism",
+    "verify:arbitrum": "hardhat verify --network arbitrum",
     "clean": "hardhat clean",
-    "node": "hardhat node",
-    "verify": "hardhat verify"
+    "node": "hardhat node"
   },
   "keywords": [
     "ethereum",
@@ -47,6 +52,7 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.9.6",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "node-fetch": "^2.7.0"
   }
 }

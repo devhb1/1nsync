@@ -2,17 +2,17 @@
 pragma solidity ^0.8.19;
 
 /**
- * @title IBatchSwapper
- * @dev Interface for the BatchSwapper contract
+ * @title IBatchSwapperV2
+ * @dev Interface for the BatchSwapperV2 contract - Updated to match V2 implementation
  */
-interface IBatchSwapper {
+interface IBatchSwapperV2 {
     // Structs
     struct SwapParams {
         address tokenIn;
         address tokenOut;
         uint256 amountIn;
         uint256 minAmountOut;
-        bytes swapData;
+        bytes swapData; // Calldata for 1inch router
     }
 
     // Events
@@ -30,6 +30,8 @@ interface IBatchSwapper {
         uint256 amountOut
     );
 
+    event RouterUpdated(address indexed oldRouter, address indexed newRouter);
+
     // Main functions
     function batchSwap(
         SwapParams[] calldata swaps,
@@ -39,22 +41,25 @@ interface IBatchSwapper {
     // View functions
     function oneInchRouter() external view returns (address);
 
-    function platformFee() external view returns (uint256);
+    function VERSION() external pure returns (string memory);
 
-    function feeRecipient() external view returns (address);
+    function ETH_ADDRESS() external pure returns (address);
 
-    function version() external pure returns (string memory);
+    function MAX_SWAPS_PER_BATCH() external pure returns (uint256);
 
     // Admin functions
-    function updateOneInchRouter(address _newRouter) external;
-
-    function updatePlatformFee(uint256 _newFee) external;
-
-    function updateFeeRecipient(address _newRecipient) external;
+    function updateRouter(address newRouter) external;
 
     function emergencyWithdraw(
         address token,
         address to,
         uint256 amount
     ) external;
+
+    // Owner functions (inherited from Ownable)
+    function owner() external view returns (address);
+
+    function transferOwnership(address newOwner) external;
+
+    function renounceOwnership() external;
 }

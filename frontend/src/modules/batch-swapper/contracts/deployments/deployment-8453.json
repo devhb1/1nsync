@@ -1,0 +1,9 @@
+{
+  "contractAddress": "0xD0e62af9D6bd6aBe722551cFa009EAc49Be833a4",
+  "chainId": 8453,
+  "oneInchRouter": "0x111111125421ca6dc452d289314280a0f8842a65",
+  "feeRecipient": "0xd1c9BD2a14b00C99803B5Ded4571814D227566C7",
+  "deployer": "0xd1c9BD2a14b00C99803B5Ded4571814D227566C7",
+  "timestamp": "2025-08-01T11:06:43.889Z",
+  "network": "unknown"
+}
