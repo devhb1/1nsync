@@ -1,20 +1,23 @@
 import { useQuery } from '@tanstack/react-query';
 import { Address } from 'viem';
+import { oneInchAPI } from '../services/oneInchAPI'; // Import centralized API service
+import { GasPrice, OneInchGasPriceAPIResponse } from '../types'; //
+import { parseUnits, formatEther } from '../utils/calculations'; //
 
-// Types
-interface GasPrice {
-    slow: string;
-    standard: string;
-    fast: string;
-    instant: string;
-    baseFee?: string;
-    maxPriorityFee?: string;
+// Local types for this hook, derived from external ones
+interface SwapParamsForGasEstimation { // Rename to avoid conflict with global SwapQuoteParams
+    fromTokenAddress: Address;
+    toTokenAddress: Address;
+    amount: string; // Amount as string for 1inch API call
+    fromAddress: Address;
+    slippage: number;
 }
 
-interface GasEstimation {
-    gasLimit: string;
+interface GasEstimationDetails {
+    gasLimit: bigint; // Changed to bigint
+    gasLimitFormatted: string; // Human-readable
     gasPrice: GasPrice;
-    totalCost: {
+    totalCostETH: { // Changed to ETH from 'totalCost' for clarity
         slow: string;
         standard: string;
         fast: string;
@@ -34,13 +37,13 @@ interface GasEstimation {
     };
 }
 
-interface SwapGasEstimate {
-    individual: GasEstimation;
-    batch: GasEstimation;
+interface SwapGasEstimateComparison {
+    individual: GasEstimationDetails;
+    batch: GasEstimationDetails;
     savings: {
-        gas: string;
-        percentage: string;
-        usd: string;
+        gas: bigint; // Changed to bigint
+        percentage: number; // Changed to number
+        usd: number; // Changed to number
     };
 }
 
@@ -50,100 +53,75 @@ interface UseGasEstimationOptions {
     refetchInterval?: number;
 }
 
-interface SwapParams {
-    fromToken: Address;
-    toToken: Address;
-    amount: string;
-    fromAddress: Address;
-    slippage: number;
-}
+// 1inch Gas Price API service (now calls oneInchAPI)
+const fetchGasPriceData = async (chainId: number): Promise<GasPrice> => {
+    const data: OneInchGasPriceAPIResponse = await oneInchAPI.getGasPrice(chainId); // Fixed: Added chainId parameter
 
-// 1inch Gas Price API service
-const fetchGasPrice = async (chainId: number = 1): Promise<GasPrice> => {
-    const baseUrl = 'https://api.1inch.dev/gas-price/v1.4';
-
-    const response = await fetch(`${baseUrl}/${chainId}`, {
-        headers: {
-            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_1INCH_API_KEY}`,
-            'Accept': 'application/json',
-        },
-    });
-
-    if (!response.ok) {
-        throw new Error(`Failed to fetch gas prices: ${response.statusText}`);
-    }
-
-    const data = await response.json();
+    // Convert string gas prices to BigInt
+    const standardGwei = Number(data.standard) / 1e9; // For currentGasPriceGwei
 
     return {
-        slow: data.slow || data.safeLow || '20000000000',
-        standard: data.standard || data.average || '25000000000',
-        fast: data.fast || '30000000000',
-        instant: data.instant || data.fastest || '35000000000',
-        baseFee: data.baseFee,
-        maxPriorityFee: data.maxPriorityFee,
+        slow: BigInt(data.slow), //
+        standard: BigInt(data.standard), //
+        fast: BigInt(data.fast), //
+        instant: BigInt(data.instant), //
+        currentGasPriceGwei: Number(data.standard) / 1e9, //
+        estimatedTime: {
+            slow: 300,
+            standard: 180,
+            fast: 60
+        }
     };
 };
 
-// Estimate gas for a single swap
-const estimateSwapGas = async (
-    swapParams: SwapParams,
-    chainId: number = 1
-): Promise<string> => {
-    const baseUrl = 'https://api.1inch.dev/swap/v6.0';
-
-    const params = new URLSearchParams({
-        src: swapParams.fromToken,
-        dst: swapParams.toToken,
-        amount: swapParams.amount,
-        from: swapParams.fromAddress,
-        slippage: swapParams.slippage.toString(),
-        gasPrice: 'fast', // Use fast gas price for estimation
-        estimateGas: 'true',
-    });
-
-    const response = await fetch(`${baseUrl}/${chainId}/swap?${params}`, {
-        headers: {
-            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_1INCH_API_KEY}`,
-            'Accept': 'application/json',
-        },
-    });
-
-    if (!response.ok) {
-        throw new Error(`Failed to estimate swap gas: ${response.statusText}`);
+// Estimate gas for a single swap (now calls oneInchAPI)
+const estimateSwapGasLimit = async (
+    swapParams: SwapParamsForGasEstimation,
+    chainId: number
+): Promise<bigint> => {
+    try {
+        const data = await oneInchAPI.getSwap({ // Using getSwap with disableEstimate true for gas limit
+            src: swapParams.fromTokenAddress,
+            dst: swapParams.toTokenAddress,
+            amount: swapParams.amount,
+            from: swapParams.fromAddress,
+            slippage: swapParams.slippage,
+            disableEstimate: false, // Request 1inch to provide gas estimate directly
+        }, chainId); // Fixed: Added chainId parameter
+        return BigInt(data.tx.gas); // Return gas as BigInt
+    } catch (error) {
+        console.error(`Failed to estimate swap gas for ${swapParams.fromTokenAddress} -> ${swapParams.toTokenAddress}:`, error); //
+        throw new Error(`Failed to estimate swap gas: ${error instanceof Error ? error.message : 'Unknown error'}`); //
     }
-
-    const data = await response.json();
-    return data.tx?.gas || '200000'; // Default fallback
 };
 
 // Calculate total cost in different units
 const calculateGasCosts = (
-    gasLimit: string,
+    gasLimit: bigint, // Changed to bigint
     gasPrice: GasPrice,
-    ethPriceUSD: number = 3000
+    ethPriceUSD: number = 3000 // Assuming ETH price for USD conversion
 ) => {
-    const limit = BigInt(gasLimit);
+    const calculateCost = (limit: bigint, price: bigint) => limit * price; //
 
-    const costs = {
-        slow: (limit * BigInt(gasPrice.slow)).toString(),
-        standard: (limit * BigInt(gasPrice.standard)).toString(),
-        fast: (limit * BigInt(gasPrice.fast)).toString(),
-        instant: (limit * BigInt(gasPrice.instant)).toString(),
+    const costsETH = { //
+        slow: formatEther(calculateCost(gasLimit, gasPrice.slow)), //
+        standard: formatEther(calculateCost(gasLimit, gasPrice.standard)), //
+        fast: formatEther(calculateCost(gasLimit, gasPrice.fast)), //
+        instant: formatEther(calculateCost(gasLimit, gasPrice.instant)), //
     };
 
-    const costsUSD = {
-        slow: ((Number(costs.slow) / 1e18) * ethPriceUSD).toFixed(4),
-        standard: ((Number(costs.standard) / 1e18) * ethPriceUSD).toFixed(4),
-        fast: ((Number(costs.fast) / 1e18) * ethPriceUSD).toFixed(4),
-        instant: ((Number(costs.instant) / 1e18) * ethPriceUSD).toFixed(4),
+    const costsUSD = { //
+        slow: (parseFloat(costsETH.slow) * ethPriceUSD).toFixed(4), //
+        standard: (parseFloat(costsETH.standard) * ethPriceUSD).toFixed(4), //
+        fast: (parseFloat(costsETH.fast) * ethPriceUSD).toFixed(4), //
+        instant: (parseFloat(costsETH.instant) * ethPriceUSD).toFixed(4), //
     };
 
-    return { costs, costsUSD };
+    return { costsETH, costsUSD }; //
 };
 
 // Hook for current gas prices
-export const useGasPrice = (options: UseGasEstimationOptions = {}) => {
+export const useGasPrice = (options: UseGasEstimationOptions = {}) => { //
     const {
         chainId = 1,
         enabled = true,
@@ -151,192 +129,194 @@ export const useGasPrice = (options: UseGasEstimationOptions = {}) => {
     } = options;
 
     const queryResult = useQuery({
-        queryKey: ['gasPrice', chainId],
-        queryFn: () => fetchGasPrice(chainId),
-        enabled,
+        queryKey: ['gasPrice', chainId], //
+        queryFn: () => fetchGasPriceData(chainId), //
+        enabled, //
         staleTime: 10_000, // 10 seconds
-        refetchInterval,
-        retry: 3,
-        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+        refetchInterval, //
+        retry: 3, //
+        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), //
     });
 
     return {
-        gasPrice: queryResult.data,
-        isLoading: queryResult.isLoading,
-        isError: queryResult.isError,
-        error: queryResult.error,
-        refetch: queryResult.refetch,
+        gasPrice: queryResult.data, //
+        isLoading: queryResult.isLoading, //
+        isError: queryResult.isError, //
+        error: queryResult.error, //
+        refetch: queryResult.refetch, //
     };
 };
 
 // Hook for swap gas estimation
 export const useSwapGasEstimation = (
-    swapParams: SwapParams | null,
+    swapParams: SwapParamsForGasEstimation | null,
     options: UseGasEstimationOptions = {}
 ) => {
     const { chainId = 1, enabled = true } = options;
-    const { gasPrice } = useGasPrice({ chainId });
+    const { gasPrice } = useGasPrice({ chainId }); //
 
     const queryResult = useQuery({
-        queryKey: ['swapGasEstimation', swapParams, chainId],
-        queryFn: async (): Promise<GasEstimation> => {
-            if (!swapParams || !gasPrice) {
-                throw new Error('Missing swap parameters or gas price');
+        queryKey: ['swapGasEstimation', swapParams, chainId], //
+        queryFn: async (): Promise<GasEstimationDetails> => { //
+            if (!swapParams || !gasPrice) { //
+                throw new Error('Missing swap parameters or gas price'); //
             }
 
-            const gasLimit = await estimateSwapGas(swapParams, chainId);
-            const { costs, costsUSD } = calculateGasCosts(gasLimit, gasPrice);
+            const gasLimit = await estimateSwapGasLimit(swapParams, chainId); //
+            const { costsETH, costsUSD } = calculateGasCosts(gasLimit, gasPrice); //
 
             return {
-                gasLimit,
-                gasPrice,
-                totalCost: costs,
-                totalCostUSD: costsUSD,
-                estimatedTime: {
-                    slow: '5-10 min',
-                    standard: '2-5 min',
-                    fast: '1-2 min',
-                    instant: '< 1 min',
+                gasLimit, //
+                gasLimitFormatted: gasLimit.toString(), // Simplified for now
+                gasPrice, //
+                totalCostETH: costsETH, //
+                totalCostUSD: costsUSD, //
+                estimatedTime: { //
+                    slow: '5-10 min', //
+                    standard: '2-5 min', //
+                    fast: '1-2 min', //
+                    instant: '< 1 min', //
                 },
             };
         },
-        enabled: enabled && !!swapParams && !!gasPrice,
+        enabled: enabled && !!swapParams && !!gasPrice, //
         staleTime: 30_000, // 30 seconds
-        retry: 2,
+        retry: 2, //
     });
 
     return {
-        estimation: queryResult.data,
-        isLoading: queryResult.isLoading,
-        isError: queryResult.isError,
-        error: queryResult.error,
-        refetch: queryResult.refetch,
+        estimation: queryResult.data, //
+        isLoading: queryResult.isLoading, //
+        isError: queryResult.isError, //
+        error: queryResult.error, //
+        refetch: queryResult.refetch, //
     };
 };
 
 // Hook for batch vs individual swap comparison
 export const useBatchSwapGasComparison = (
-    individualSwaps: SwapParams[],
-    batchSwapParams: SwapParams | null,
+    individualSwapParams: SwapParamsForGasEstimation[], // Changed type
+    batchSwapParams: SwapParamsForGasEstimation | null, // Changed type
     options: UseGasEstimationOptions = {}
 ) => {
     const { chainId = 1, enabled = true } = options;
-    const { gasPrice } = useGasPrice({ chainId });
+    const { gasPrice } = useGasPrice({ chainId }); //
 
     const queryResult = useQuery({
-        queryKey: ['batchSwapGasComparison', individualSwaps, batchSwapParams, chainId],
-        queryFn: async (): Promise<SwapGasEstimate> => {
-            if (!gasPrice || !batchSwapParams || individualSwaps.length === 0) {
-                throw new Error('Missing required parameters');
+        queryKey: ['batchSwapGasComparison', individualSwapParams, batchSwapParams, chainId], //
+        queryFn: async (): Promise<SwapGasEstimateComparison> => { //
+            if (!gasPrice || !batchSwapParams || individualSwapParams.length === 0) { //
+                throw new Error('Missing required parameters for gas comparison'); //
             }
 
             // Estimate gas for individual swaps
-            const individualGasEstimates = await Promise.all(
-                individualSwaps.map(swap => estimateSwapGas(swap, chainId))
+            const individualGasEstimates = await Promise.all( //
+                individualSwapParams.map(swap => estimateSwapGasLimit(swap, chainId)) //
             );
 
-            const totalIndividualGas = individualGasEstimates
-                .reduce((sum, gas) => sum + BigInt(gas), BigInt(0))
-                .toString();
+            const totalIndividualGas = individualGasEstimates //
+                .reduce((sum, gas) => sum + gas, BigInt(0)); //
 
             // Estimate gas for batch swap
-            const batchGas = await estimateSwapGas(batchSwapParams, chainId);
+            const batchGas = await estimateSwapGasLimit(batchSwapParams, chainId); //
 
             // Calculate costs for both approaches
-            const individualCosts = calculateGasCosts(totalIndividualGas, gasPrice);
-            const batchCosts = calculateGasCosts(batchGas, gasPrice);
+            const individualCosts = calculateGasCosts(totalIndividualGas, gasPrice); //
+            const batchCosts = calculateGasCosts(batchGas, gasPrice); //
 
             // Calculate savings
-            const gasSavings = BigInt(totalIndividualGas) - BigInt(batchGas);
-            const savingsPercentage = Number(gasSavings * BigInt(10000) / BigInt(totalIndividualGas)) / 100;
-            const usdSavings = (
-                parseFloat(individualCosts.costsUSD.standard) -
-                parseFloat(batchCosts.costsUSD.standard)
-            ).toFixed(4);
+            const gasSavingsAbsolute = totalIndividualGas - batchGas; //
+            const savingsPercentage = totalIndividualGas > 0n ? Number(gasSavingsAbsolute * 10000n / totalIndividualGas) / 100 : 0; //
+            const usdSavings = ( //
+                parseFloat(individualCosts.costsUSD.standard) - //
+                parseFloat(batchCosts.costsUSD.standard) //
+            );
 
-            return {
-                individual: {
-                    gasLimit: totalIndividualGas,
-                    gasPrice,
-                    totalCost: individualCosts.costs,
-                    totalCostUSD: individualCosts.costsUSD,
-                    estimatedTime: {
-                        slow: `${individualSwaps.length * 5}-${individualSwaps.length * 10} min`,
-                        standard: `${individualSwaps.length * 2}-${individualSwaps.length * 5} min`,
-                        fast: `${individualSwaps.length * 1}-${individualSwaps.length * 2} min`,
-                        instant: `< ${individualSwaps.length} min`,
+            return { //
+                individual: { //
+                    gasLimit: totalIndividualGas, //
+                    gasLimitFormatted: totalIndividualGas.toString(), //
+                    gasPrice, //
+                    totalCostETH: individualCosts.costsETH, //
+                    totalCostUSD: individualCosts.costsUSD, //
+                    estimatedTime: { //
+                        slow: `${individualSwapParams.length * 5}-${individualSwapParams.length * 10} min`, //
+                        standard: `${individualSwapParams.length * 2}-${individualSwapParams.length * 5} min`, //
+                        fast: `${individualSwapParams.length * 1}-${individualSwapParams.length * 2} min`, //
+                        instant: `< ${individualSwapParams.length} min`, //
                     },
                 },
-                batch: {
-                    gasLimit: batchGas,
-                    gasPrice,
-                    totalCost: batchCosts.costs,
-                    totalCostUSD: batchCosts.costsUSD,
-                    estimatedTime: {
-                        slow: '5-10 min',
-                        standard: '2-5 min',
-                        fast: '1-2 min',
-                        instant: '< 1 min',
+                batch: { //
+                    gasLimit: batchGas, //
+                    gasLimitFormatted: batchGas.toString(), //
+                    gasPrice, //
+                    totalCostETH: batchCosts.costsETH, //
+                    totalCostUSD: batchCosts.costsUSD, //
+                    estimatedTime: { //
+                        slow: '5-10 min', //
+                        standard: '2-5 min', //
+                        fast: '1-2 min', //
+                        instant: '< 1 min', //
                     },
                 },
-                savings: {
-                    gas: gasSavings.toString(),
-                    percentage: savingsPercentage.toFixed(2),
-                    usd: usdSavings,
+                savings: { //
+                    gas: gasSavingsAbsolute, //
+                    percentage: parseFloat(savingsPercentage.toFixed(2)), //
+                    usd: parseFloat(usdSavings.toFixed(4)), //
                 },
             };
         },
-        enabled: enabled && !!gasPrice && !!batchSwapParams && individualSwaps.length > 0,
+        enabled: enabled && !!gasPrice && !!batchSwapParams && individualSwapParams.length > 0, //
         staleTime: 30_000, // 30 seconds
-        retry: 2,
+        retry: 2, //
     });
 
     return {
-        comparison: queryResult.data,
-        isLoading: queryResult.isLoading,
-        isError: queryResult.isError,
-        error: queryResult.error,
-        refetch: queryResult.refetch,
+        comparison: queryResult.data, //
+        isLoading: queryResult.isLoading, //
+        isError: queryResult.isError, //
+        error: queryResult.error, //
+        refetch: queryResult.refetch, //
     };
 };
 
 // Utility hook for gas optimization recommendations
-export const useGasOptimizationTips = () => {
-    const { gasPrice } = useGasPrice();
+export const useGasOptimizationTips = () => { //
+    const { gasPrice } = useGasPrice(); //
 
-    const getOptimizationTips = () => {
-        if (!gasPrice) return [];
+    const getOptimizationTips = () => { //
+        if (!gasPrice) return []; //
 
-        const tips = [];
-        const standardGwei = Number(gasPrice.standard) / 1e9;
+        const tips = []; //
+        const standardGwei = gasPrice.currentGasPriceGwei; //
 
-        if (standardGwei > 50) {
-            tips.push({
-                type: 'high-gas',
-                message: 'Gas prices are high. Consider waiting or using slow gas price.',
-                severity: 'warning',
+        if (standardGwei > 50) { //
+            tips.push({ //
+                type: 'high-gas', //
+                message: 'Gas prices are high. Consider waiting or using slow gas price.', //
+                severity: 'warning', //
             });
         }
 
-        if (standardGwei < 20) {
-            tips.push({
-                type: 'low-gas',
-                message: 'Gas prices are low. Good time for transactions!',
-                severity: 'success',
+        if (standardGwei < 20) { //
+            tips.push({ //
+                type: 'low-gas', //
+                message: 'Gas prices are low. Good time for transactions!', //
+                severity: 'success', //
             });
         }
 
-        tips.push({
-            type: 'batch',
-            message: 'Consider batching multiple swaps to save gas.',
-            severity: 'info',
+        tips.push({ //
+            type: 'batch', //
+            message: 'Consider batching multiple swaps to save gas.', //
+            severity: 'info', //
         });
 
-        return tips;
+        return tips; //
     };
 
     return {
-        tips: getOptimizationTips(),
-        currentGasLevel: gasPrice ? (Number(gasPrice.standard) / 1e9 > 50 ? 'high' : 'normal') : 'unknown',
+        tips: getOptimizationTips(), //
+        currentGasLevel: gasPrice ? (gasPrice.currentGasPriceGwei > 50 ? 'high' : 'normal') : 'unknown', //
     };
 };

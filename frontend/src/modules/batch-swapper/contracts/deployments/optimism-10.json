@@ -1,0 +1,23 @@
+{
+  "contract": "BatchSwapperV2",
+  "version": "2.0.0",
+  "address": "0x5821173b323022dFc1549Be1a6Dee657997Ec5Db",
+  "network": {
+    "name": "Optimism",
+    "chainId": 10,
+    "router": "0x111111125421cA6dc452d289314280a0f8842A65",
+    "explorer": "https://optimistic.etherscan.io"
+  },
+  "deployment": {
+    "deployer": "0xd1c9BD2a14b00C99803B5Ded4571814D227566C7",
+    "owner": "0xd1c9BD2a14b00C99803B5Ded4571814D227566C7",
+    "txHash": "0xd93e75531d196de76c924f1a48ee49a10571b4a485379bec2054de0199013863",
+    "blockNumber": 139251590,
+    "timestamp": "2025-08-02T02:32:41.307Z"
+  },
+  "verification": {
+    "explorerUrl": "https://optimistic.etherscan.io/address/0x5821173b323022dFc1549Be1a6Dee657997Ec5Db",
+    "maxSwapsPerBatch": "10",
+    "routerAddress": "0x111111125421cA6dc452d289314280a0f8842A65"
+  }
+}

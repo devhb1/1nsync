@@ -1,71 +1,34 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Address } from 'viem';
 import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
+import { oneInchAPI } from '../services/oneInchAPI';
+import {
+    SwapRoute,
+    OneInchQuoteParams,
+    OneInchSwapParams,
+    OneInchApproveAPIResponse,
+    OneInchSwapAPIResponse,
+    Token,
+    SwapInstruction,
+    OptimizationConfig
+} from '../types';
+import { formatUnits, parseUnits } from '../utils/calculations';
+import { portfolioService } from '../services/portfolioService';
 
-// Types
-interface SwapRoute {
-    fromToken: {
-        address: Address;
-        symbol: string;
-        decimals: number;
-        amount: string;
-    };
-    toToken: {
-        address: Address;
-        symbol: string;
-        decimals: number;
-        amount: string;
-    };
-    protocols: Protocol[];
-    estimatedGas: string;
-    estimatedGasUSD: string;
-    priceImpact: string;
-    slippage: string;
-    route: RouteStep[];
-}
-
-interface Protocol {
-    name: string;
-    part: number;
+// Internal types for this hook's parameters (align with 1inch API but use Address)
+interface SwapQuoteParamsInternal {
     fromTokenAddress: Address;
     toTokenAddress: Address;
-}
-
-interface RouteStep {
-    name: string;
-    part: number;
-    fromTokenAddress: Address;
-    toTokenAddress: Address;
-    toTokenAmount: string;
-}
-
-interface SwapTransaction {
-    to: Address;
-    data: string;
-    value: string;
-    gas: string;
-    gasPrice: string;
-}
-
-interface SwapQuoteParams {
-    fromTokenAddress: Address;
-    toTokenAddress: Address;
-    amount: string;
+    amount: string; // Amount as string for 1inch API
     slippage?: number;
-    gasPrice?: 'slow' | 'standard' | 'fast' | 'instant';
+    gasPrice?: string; // 'slow' | 'standard' | 'fast' | 'instant'
     protocols?: string;
     fee?: number;
-    gasLimit?: number;
+    gasLimit?: number; // Not directly used in 1inch quote params, but useful for build
     connectorTokens?: string;
     complexityLevel?: number;
     mainRouteParts?: number;
     parts?: number;
-}
-
-interface BatchSwapParams {
-    swaps: SwapQuoteParams[];
-    gasPrice?: 'slow' | 'standard' | 'fast' | 'instant';
-    slippage?: number;
 }
 
 interface UseSwapRoutesOptions {
@@ -75,174 +38,130 @@ interface UseSwapRoutesOptions {
     refreshInterval?: number;
 }
 
-// 1inch Swap API service
-const fetchSwapQuote = async (
-    params: SwapQuoteParams,
-    chainId: number = 1
-): Promise<SwapRoute> => {
-    const baseUrl = 'https://api.1inch.dev/swap/v6.0';
+// Helper to get Token object from address (using portfolio service or fallback)
+const getTokenFromAddress = async (address: Address, chainId: number): Promise<Token> => {
+    try {
+        // Try to get token from portfolio service
+        const tokens = await portfolioService.getAllSupportedTokens(chainId);
+        const tokenData = Object.values(tokens).find(
+            (token) => token.address?.toLowerCase() === address.toLowerCase()
+        );
 
-    const queryParams = new URLSearchParams({
-        src: params.fromTokenAddress,
-        dst: params.toTokenAddress,
-        amount: params.amount,
-        includeTokensInfo: 'true',
-        includeProtocols: 'true',
-        includeGasInfo: 'true',
-        ...(params.slippage && { slippage: params.slippage.toString() }),
-        ...(params.gasPrice && { gasPrice: params.gasPrice }),
-        ...(params.protocols && { protocols: params.protocols }),
-        ...(params.fee && { fee: params.fee.toString() }),
-        ...(params.gasLimit && { gasLimit: params.gasLimit.toString() }),
-        ...(params.connectorTokens && { connectorTokens: params.connectorTokens }),
-        ...(params.complexityLevel && { complexityLevel: params.complexityLevel.toString() }),
-        ...(params.mainRouteParts && { mainRouteParts: params.mainRouteParts.toString() }),
-        ...(params.parts && { parts: params.parts.toString() }),
-    });
-
-    const response = await fetch(`${baseUrl}/${chainId}/quote?${queryParams}`, {
-        headers: {
-            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_1INCH_API_KEY}`,
-            'Accept': 'application/json',
-        },
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.description || `Failed to fetch swap quote: ${response.statusText}`);
+        if (tokenData) {
+            return {
+                address,
+                symbol: tokenData.symbol || 'UNKNOWN',
+                name: tokenData.name || 'Unknown Token',
+                decimals: tokenData.decimals || 18,
+                logoURI: tokenData.logoURI,
+            };
+        }
+    } catch (error) {
+        console.warn('Failed to fetch token from portfolio service:', error);
     }
 
-    const data = await response.json();
-
+    // Fallback to a generic token if not found
     return {
-        fromToken: {
-            address: data.fromToken.address,
-            symbol: data.fromToken.symbol,
-            decimals: data.fromToken.decimals,
-            amount: params.amount,
-        },
-        toToken: {
-            address: data.toToken.address,
-            symbol: data.toToken.symbol,
-            decimals: data.toToken.decimals,
-            amount: data.toAmount,
-        },
-        protocols: data.protocols || [],
-        estimatedGas: data.estimatedGas || '0',
-        estimatedGasUSD: data.estimatedGasUSD || '0',
-        priceImpact: data.priceImpact || '0',
-        slippage: params.slippage?.toString() || '1',
-        route: data.route || [],
+        address,
+        symbol: address.slice(0, 6) + '...',
+        name: `Unknown Token (${address.slice(0, 6)}...)`,
+        decimals: 18, // Default to 18 decimals if unknown
     };
 };
 
-// Build swap transaction
-const buildSwapTransaction = async (
-    params: SwapQuoteParams & { fromAddress: Address },
-    chainId: number = 1
-): Promise<SwapTransaction> => {
-    const baseUrl = 'https://api.1inch.dev/swap/v6.0';
+// 1inch Swap API service (refactored to call oneInchAPI)
+const fetchSwapQuoteData = async (
+    params: SwapQuoteParamsInternal,
+    chainId: number
+): Promise<SwapRoute> => {
+    const quoteParams: OneInchQuoteParams = {
+        src: params.fromTokenAddress,
+        dst: params.toTokenAddress,
+        amount: params.amount,
+        // Map other params if 1inch quote API supports them
+    };
 
-    const queryParams = new URLSearchParams({
+    const data = await oneInchAPI.getQuote(quoteParams, chainId);
+
+    const fromToken = await getTokenFromAddress(data.fromToken.address as Address, chainId);
+    const toToken = await getTokenFromAddress(data.toToken.address as Address, chainId);
+
+    const fromAmountBigInt = parseUnits(params.amount, fromToken.decimals);
+    const toAmountBigInt = parseUnits(data.toTokenAmount, toToken.decimals);
+
+    return {
+        id: `${fromToken.symbol}-${toToken.symbol}-${Date.now()}`,
+        fromToken,
+        toToken,
+        fromAmount: fromAmountBigInt,
+        fromAmountFormatted: formatUnits(fromAmountBigInt, fromToken.decimals),
+        toAmount: toAmountBigInt,
+        toAmountFormatted: formatUnits(toAmountBigInt, toToken.decimals),
+        gasEstimate: BigInt(data.estimatedGas || 0),
+        priceImpact: parseFloat(String(data.priceImpact || 0)), // Convert to string then number
+        protocols: data.protocols.flat().map((p: any) => p.name).filter(Boolean), // Convert to string array
+        valueUSD: 0 // Will be calculated by optimization engine
+    };
+};
+
+// Build swap transaction (refactored to call oneInchAPI)
+const buildSwapTransactionData = async (
+    params: SwapQuoteParamsInternal & { fromAddress: Address },
+    chainId: number
+): Promise<SwapRoute['tx']> => { // Return only the tx part
+    const swapParams: OneInchSwapParams = {
         src: params.fromTokenAddress,
         dst: params.toTokenAddress,
         amount: params.amount,
         from: params.fromAddress,
-        slippage: (params.slippage || 1).toString(),
-        ...(params.gasPrice && { gasPrice: params.gasPrice }),
-        ...(params.protocols && { protocols: params.protocols }),
-        ...(params.fee && { fee: params.fee.toString() }),
-        ...(params.gasLimit && { gasLimit: params.gasLimit.toString() }),
-    });
+        slippage: params.slippage || 1,
+        protocols: params.protocols,
+        // Remove gasPrice as it's not part of OneInchSwapParams
+    };
 
-    const response = await fetch(`${baseUrl}/${chainId}/swap?${queryParams}`, {
-        headers: {
-            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_1INCH_API_KEY}`,
-            'Accept': 'application/json',
-        },
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.description || `Failed to build swap transaction: ${response.statusText}`);
-    }
-
-    const data = await response.json();
+    const data: OneInchSwapAPIResponse = await oneInchAPI.getSwap(swapParams, chainId);
 
     return {
-        to: data.tx.to,
-        data: data.tx.data,
-        value: data.tx.value,
-        gas: data.tx.gas,
-        gasPrice: data.tx.gasPrice,
+        to: data.tx.to as Address,
+        data: data.tx.data as `0x${string}`,
+        value: BigInt(data.tx.value),
+        gas: BigInt(data.tx.gas),
+        gasPrice: BigInt(data.tx.gasPrice),
     };
 };
 
-// Check token allowance
-const checkAllowance = async (
+// Check token allowance (refactored to call oneInchAPI)
+const checkAllowanceData = async (
     tokenAddress: Address,
     ownerAddress: Address,
-    spenderAddress: Address,
-    chainId: number = 1
-): Promise<string> => {
-    const baseUrl = 'https://api.1inch.dev/swap/v6.0';
-
-    const response = await fetch(
-        `${baseUrl}/${chainId}/approve/allowance?tokenAddress=${tokenAddress}&walletAddress=${ownerAddress}`,
-        {
-            headers: {
-                'Authorization': `Bearer ${process.env.NEXT_PUBLIC_1INCH_API_KEY}`,
-                'Accept': 'application/json',
-            },
-        }
-    );
-
-    if (!response.ok) {
-        throw new Error(`Failed to check allowance: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return data.allowance || '0';
+    chainId: number
+): Promise<bigint> => {
+    const spenderData = await oneInchAPI.getSpender(chainId);
+    const allowanceData = await oneInchAPI.getAllowance(tokenAddress, ownerAddress, spenderData.address, chainId);
+    return BigInt(allowanceData.allowance || '0');
 };
 
-// Get approval transaction
-const getApprovalTransaction = async (
+// Get approval transaction (refactored to call oneInchAPI)
+const getApprovalTransactionData = async (
     tokenAddress: Address,
-    amount?: string,
-    chainId: number = 1
-): Promise<SwapTransaction> => {
-    const baseUrl = 'https://api.1inch.dev/swap/v6.0';
-
-    const params = new URLSearchParams({
-        tokenAddress,
-        ...(amount && { amount }),
-    });
-
-    const response = await fetch(`${baseUrl}/${chainId}/approve/transaction?${params}`, {
-        headers: {
-            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_1INCH_API_KEY}`,
-            'Accept': 'application/json',
-        },
-    });
-
-    if (!response.ok) {
-        throw new Error(`Failed to get approval transaction: ${response.statusText}`);
-    }
-
-    const data = await response.json();
+    chainId: number,
+    amount?: string
+): Promise<SwapRoute['tx']> => { // Return only tx part
+    const data: OneInchApproveAPIResponse = await oneInchAPI.getApproveTransaction(tokenAddress, chainId, amount);
 
     return {
-        to: data.to,
-        data: data.data,
-        value: data.value || '0',
-        gas: data.gas,
-        gasPrice: data.gasPrice,
+        to: data.to as Address,
+        data: data.data as `0x${string}`,
+        value: BigInt(data.value || '0'),
+        // Use a default gas limit since API doesn't provide gas
+        gas: BigInt('50000'), // Default gas limit for approval transactions
+        gasPrice: BigInt(data.gasPrice || '0'),
     };
 };
 
-// Main hook for swap quotes
+// Main hook for single swap quotes
 export const useSwapRoute = (
-    params: SwapQuoteParams | null,
+    params: SwapQuoteParamsInternal | null,
     options: UseSwapRoutesOptions = {}
 ) => {
     const {
@@ -254,7 +173,7 @@ export const useSwapRoute = (
 
     const queryResult = useQuery({
         queryKey: ['swapRoute', params, chainId],
-        queryFn: () => fetchSwapQuote(params!, chainId),
+        queryFn: () => fetchSwapQuoteData(params!, chainId),
         enabled: enabled && !!params,
         staleTime: autoRefresh ? 15_000 : 60_000,
         refetchInterval: autoRefresh ? refreshInterval : false,
@@ -274,7 +193,7 @@ export const useSwapRoute = (
 
 // Hook for multiple swap routes (for batch comparison)
 export const useMultipleSwapRoutes = (
-    swapParams: SwapQuoteParams[],
+    swapParams: SwapQuoteParamsInternal[],
     options: UseSwapRoutesOptions = {}
 ) => {
     const {
@@ -288,7 +207,7 @@ export const useMultipleSwapRoutes = (
         queryKey: ['multipleSwapRoutes', swapParams, chainId],
         queryFn: async () => {
             const routes = await Promise.allSettled(
-                swapParams.map(params => fetchSwapQuote(params, chainId))
+                swapParams.map(params => fetchSwapQuoteData(params, chainId))
             );
 
             return routes.map((result, index) => ({
@@ -307,18 +226,20 @@ export const useMultipleSwapRoutes = (
     const totalEstimation = queryResult.data?.reduce(
         (acc, item) => {
             if (item.route) {
-                acc.totalGas = (BigInt(acc.totalGas) + BigInt(item.route.estimatedGas)).toString();
-                acc.totalGasUSD = (parseFloat(acc.totalGasUSD) + parseFloat(item.route.estimatedGasUSD)).toString();
-                acc.totalPriceImpact = Math.max(acc.totalPriceImpact, parseFloat(item.route.priceImpact));
+                acc.totalGas = acc.totalGas + item.route.gasEstimate;
+                acc.totalPriceImpact = Math.max(acc.totalPriceImpact, item.route.priceImpact);
             }
             return acc;
         },
-        { totalGas: '0', totalGasUSD: '0', totalPriceImpact: 0 }
+        { totalGas: 0n, totalPriceImpact: 0 } // Initialize totalGas as BigInt
     );
 
     return {
         routes: queryResult.data || [],
-        totalEstimation,
+        totalEstimation: { // Map BigInt to string for direct usage outside if needed
+            totalGas: totalEstimation?.totalGas.toString() || '0',
+            totalPriceImpact: totalEstimation?.totalPriceImpact || 0
+        },
         isLoading: queryResult.isLoading,
         isError: queryResult.isError,
         error: queryResult.error,
@@ -329,27 +250,26 @@ export const useMultipleSwapRoutes = (
 // Hook for token allowance checking
 export const useTokenAllowance = (
     tokenAddress: Address | null,
-    spenderAddress: Address | null,
     options: UseSwapRoutesOptions = {}
 ) => {
     const { address } = useAccount();
     const { chainId = 1, enabled = true } = options;
 
     const queryResult = useQuery({
-        queryKey: ['tokenAllowance', tokenAddress, address, spenderAddress, chainId],
-        queryFn: () => checkAllowance(tokenAddress!, address!, spenderAddress!, chainId),
-        enabled: enabled && !!tokenAddress && !!address && !!spenderAddress,
+        queryKey: ['tokenAllowance', tokenAddress, address, chainId],
+        queryFn: () => checkAllowanceData(tokenAddress!, address!, chainId),
+        enabled: enabled && !!tokenAddress && !!address,
         staleTime: 30_000,
         retry: 2,
     });
 
-    const hasInsufficientAllowance = (requiredAmount: string): boolean => {
+    const hasInsufficientAllowance = (requiredAmount: bigint): boolean => {
         if (!queryResult.data) return true;
-        return BigInt(queryResult.data) < BigInt(requiredAmount);
+        return queryResult.data < requiredAmount;
     };
 
     return {
-        allowance: queryResult.data || '0',
+        allowance: queryResult.data || 0n,
         hasInsufficientAllowance,
         isLoading: queryResult.isLoading,
         isError: queryResult.isError,
@@ -378,15 +298,19 @@ export const useExecuteSwap = () => {
                 throw new Error('Wallet not connected');
             }
 
-            const approvalTx = await getApprovalTransaction(tokenAddress, amount, chainId);
+            const approvalTx = await getApprovalTransactionData(tokenAddress, chainId, amount);
+
+            if (!approvalTx) {
+                throw new Error('Failed to get approval transaction data');
+            }
 
             const hash = await walletClient.sendTransaction({
                 account: address,
                 to: approvalTx.to,
-                data: approvalTx.data as `0x${string}`,
-                value: BigInt(approvalTx.value),
-                gas: BigInt(approvalTx.gas),
-                gasPrice: BigInt(approvalTx.gasPrice),
+                data: approvalTx.data,
+                value: approvalTx.value,
+                gas: approvalTx.gas,
+                gasPrice: approvalTx.gasPrice,
             });
 
             // Wait for confirmation
@@ -403,25 +327,29 @@ export const useExecuteSwap = () => {
             params,
             chainId = 1,
         }: {
-            params: SwapQuoteParams;
+            params: SwapQuoteParamsInternal;
             chainId?: number;
         }) => {
             if (!walletClient || !address) {
                 throw new Error('Wallet not connected');
             }
 
-            const swapTx = await buildSwapTransaction(
+            const swapTx = await buildSwapTransactionData(
                 { ...params, fromAddress: address },
                 chainId
             );
 
+            if (!swapTx) {
+                throw new Error('Failed to get swap transaction data');
+            }
+
             const hash = await walletClient.sendTransaction({
                 account: address,
                 to: swapTx.to,
-                data: swapTx.data as `0x${string}`,
-                value: BigInt(swapTx.value),
-                gas: BigInt(swapTx.gas),
-                gasPrice: BigInt(swapTx.gasPrice),
+                data: swapTx.data,
+                value: swapTx.value,
+                gas: swapTx.gas,
+                gasPrice: swapTx.gasPrice,
             });
 
             // Wait for confirmation
@@ -443,48 +371,55 @@ export const useExecuteSwap = () => {
     };
 };
 
-// Hook for batch swap optimization
+// Hook for batch swap optimization (remains mostly simulation-based as per your original plan)
 export const useBatchSwapOptimization = (
-    individualSwaps: SwapQuoteParams[],
+    individualSwapInstructions: SwapInstruction[],
+    optimizationConfig: OptimizationConfig,
+    userAddress: Address,
     options: UseSwapRoutesOptions = {}
 ) => {
     const { chainId = 1, enabled = true } = options;
 
-    // Get individual routes
+    const individualQuoteParams: SwapQuoteParamsInternal[] = individualSwapInstructions.map(instr => ({
+        fromTokenAddress: instr.fromTokenAddress,
+        toTokenAddress: instr.toTokenAddress,
+        amount: instr.amount.toString(),
+        slippage: optimizationConfig.maxSlippage,
+    }));
+
     const { routes: individualRoutes, isLoading: loadingIndividual } = useMultipleSwapRoutes(
-        individualSwaps,
+        individualQuoteParams,
         { ...options, enabled }
     );
 
-    // TODO: Implement actual batch swap logic when 1inch supports it
-    // For now, we'll simulate batch optimization by analyzing individual swaps
     const batchOptimization = useQuery({
-        queryKey: ['batchSwapOptimization', individualSwaps, chainId],
+        queryKey: ['batchSwapOptimization', individualSwapInstructions, chainId],
         queryFn: async () => {
-            // This would integrate with 1inch batch swap functionality when available
-            // For now, return optimization suggestions based on individual routes
-
-            const validRoutes = individualRoutes.filter(r => r.route && !r.error);
+            const validRoutes = individualRoutes.filter(r => r.route && !r.error).map(r => r.route!);
             if (validRoutes.length === 0) return null;
 
-            const totalGas = validRoutes.reduce(
-                (sum, r) => sum + BigInt(r.route!.estimatedGas),
-                BigInt(0)
+            const totalGasIndividual = validRoutes.reduce(
+                (sum, r) => sum + r.gasEstimate,
+                0n
             );
 
-            // Simulate 20-30% gas savings for batch execution
-            const estimatedBatchGas = (totalGas * BigInt(75)) / BigInt(100); // 25% savings
-            const gasSaved = totalGas - estimatedBatchGas;
-            const savingsPercentage = Number(gasSaved * BigInt(10000) / totalGas) / 100;
+            // Simulate batch execution based on the largest individual swap for gas estimation
+            const largestSwapRoute = validRoutes.reduce((largest, current) =>
+                (current.valueUSD || 0) > (largest.valueUSD || 0) ? current : largest
+            );
+            const simulatedBatchGas = BigInt(Math.floor(Number(largestSwapRoute.gasEstimate) * 0.65));
+
+            const gasSaved = totalGasIndividual - simulatedBatchGas;
+            const savingsPercentage = totalGasIndividual > 0n ? Number(gasSaved * 10000n / totalGasIndividual) / 100 : 0;
 
             return {
                 canOptimize: validRoutes.length > 1,
-                individualGas: totalGas.toString(),
-                batchGas: estimatedBatchGas.toString(),
+                individualGas: totalGasIndividual.toString(),
+                batchGas: simulatedBatchGas.toString(),
                 gasSaved: gasSaved.toString(),
                 savingsPercentage,
                 recommendedAction: savingsPercentage > 10 ? 'batch' : 'individual',
-                routes: validRoutes.map(r => r.route!),
+                routes: validRoutes,
             };
         },
         enabled: enabled && individualRoutes.length > 0 && !loadingIndividual,

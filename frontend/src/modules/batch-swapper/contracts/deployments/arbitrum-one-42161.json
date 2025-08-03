@@ -1,0 +1,23 @@
+{
+  "contract": "BatchSwapperV2",
+  "version": "2.0.0",
+  "address": "0x5821173b323022dFc1549Be1a6Dee657997Ec5Db",
+  "network": {
+    "name": "Arbitrum One",
+    "chainId": 42161,
+    "router": "0x111111125421cA6dc452d289314280a0f8842A65",
+    "explorer": "https://arbiscan.io"
+  },
+  "deployment": {
+    "deployer": "0xd1c9BD2a14b00C99803B5Ded4571814D227566C7",
+    "owner": "0xd1c9BD2a14b00C99803B5Ded4571814D227566C7",
+    "txHash": "0x501eaca6450999976b08cf5bfc42fab7bb36832b75cc6588b10f145bab8c415d",
+    "blockNumber": 364040476,
+    "timestamp": "2025-08-02T02:31:18.069Z"
+  },
+  "verification": {
+    "explorerUrl": "https://arbiscan.io/address/0x5821173b323022dFc1549Be1a6Dee657997Ec5Db",
+    "maxSwapsPerBatch": "10",
+    "routerAddress": "0x111111125421cA6dc452d289314280a0f8842A65"
+  }
+}
