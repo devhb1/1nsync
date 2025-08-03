@@ -1,4 +1,3 @@
-# 🏆 1NSYNC — Built for 1inch API Hackathon 2025
 
 # 💎 1NSYNC — The Ultimate Modular DeFi Trading Platform
 
@@ -276,11 +275,6 @@ npx hardhat run scripts/deploy.js --network base
 - **Scalable Design** - Modular architecture for future expansion
 
 ---
-
-## 🎯 **Hackathon Track Alignment: "Build a full Application using 1inch APIs"**
-
-**1NSYNC perfectly embodies this track by:**
-
 1. **📱 Full Application** - Complete end-to-end DeFi platform
 2. **🔌 Comprehensive API Usage** - 6+ different 1inch APIs integrated  
 3. **💰 Real Value Creation** - Measurable gas savings and improved UX
@@ -296,14 +290,6 @@ npx hardhat run scripts/deploy.js --network base
 - ✅ Approval APIs - UX enhancement
 
 ---
-
-## 👥 **Team & Hackathon Details**
-
-**Project Name:** 1NSYNC - The Ultimate Modular DeFi Trading Platform  
-**Track:** Build a full Application using 1inch APIs ($30,000 Prize Pool)  
-**Submission Date:** January 2025  
-**Team Size:** Solo Developer Showcase  
-
 **Key Differentiators:**
 - Production-ready smart contracts with proven gas savings
 - Comprehensive 1inch API integration across all major services  
@@ -316,10 +302,5 @@ npx hardhat run scripts/deploy.js --network base
 ## 🔗 **Links & Resources**
 
 - **🌐 Live Demo**: [1nsync-defi.vercel.app](https://1nsync-defi.vercel.app)
-- **📚 Documentation**: [Full Technical Docs](./frontend/src/modules/batch-swapper/README.md)
-- **🔧 Smart Contract**: `0x5ae9437593704077c44648FCDB9caC99C091Ece9` on Base
-- **📹 Demo Video**: [Platform Walkthrough](https://your-video-link.com)
-- **🐙 Source Code**: [GitHub Repository](https://github.com/devhb1/1nsync)
-
 **Built with ❤️ for the 1inch API Hackathon 2025**
 
