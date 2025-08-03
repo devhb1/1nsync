@@ -105,7 +105,7 @@ function ModuleCard({
 export function ModulesGrid() {
   const modules: ModuleCardProps[] = [
     {
-      title: "Gas Optimizer",
+      title: "Gas Optimized Batch Swapper",
       description: "Batch multiple swaps and save up to 50% on gas costs with intelligent route optimization.",
       icon: <Zap className="h-6 w-6 text-white" />,
       features: [
@@ -114,52 +114,52 @@ export function ModulesGrid() {
         "Real-time gas estimation",
         "Route optimization"
       ],
-      status: 'in-development',
+      status: 'available',
       href: '/batch-swapper',
       gradient: 'from-yellow-500 to-orange-500'
     },
-    {
-      title: "Social Trading",
-      description: "Copy successful traders with MEV protection and risk management features.",
-      icon: <Users className="h-6 w-6 text-white" />,
-      features: [
-        "Top trader leaderboard",
-        "Strategy analysis",
-        "MEV protection",
-        "Risk management"
-      ],
-      status: 'in-development',
-      href: '/social-trading',
-      gradient: 'from-blue-500 to-purple-500'
-    },
-    {
-      title: "Auto DCA",
-      description: "Volatility-based dollar cost averaging with AI-optimized scheduling.",
-      icon: <TrendingUp className="h-6 w-6 text-white" />,
-      features: [
-        "Volatility analysis",
-        "Smart scheduling",
-        "Backtesting",
-        "Performance tracking"
-      ],
-      status: 'coming-soon',
-      href: '/auto-dca',
-      gradient: 'from-green-500 to-teal-500'
-    },
-    {
-      title: "Trading Autopilot",
-      description: "AI-powered trading decisions across all DeFi protocols with optimal execution.",
-      icon: <Bot className="h-6 w-6 text-white" />,
-      features: [
-        "Protocol selection",
-        "Market analysis",
-        "Automated execution",
-        "Cross-chain support"
-      ],
-      status: 'coming-soon',
-      href: '/trading-autopilot',
-      gradient: 'from-purple-500 to-pink-500'
-    }
+    // {
+    //   title: "Social Trading",
+    //   description: "Copy successful traders with MEV protection and risk management features.",
+    //   icon: <Users className="h-6 w-6 text-white" />,
+    //   features: [
+    //     "Top trader leaderboard",
+    //     "Strategy analysis",
+    //     "MEV protection",
+    //     "Risk management"
+    //   ],
+    //   status: 'in-development',
+    //   href: '/social-trading',
+    //   gradient: 'from-blue-500 to-purple-500'
+    // },
+    // {
+    //   title: "Auto DCA",
+    //   description: "Volatility-based dollar cost averaging with AI-optimized scheduling.",
+    //   icon: <TrendingUp className="h-6 w-6 text-white" />,
+    //   features: [
+    //     "Volatility analysis",
+    //     "Smart scheduling",
+    //     "Backtesting",
+    //     "Performance tracking"
+    //   ],
+    //   status: 'coming-soon',
+    //   href: '/auto-dca',
+    //   gradient: 'from-green-500 to-teal-500'
+    // },
+    // {
+    //   title: "Trading Autopilot",
+    //   description: "AI-powered trading decisions across all DeFi protocols with optimal execution.",
+    //   icon: <Bot className="h-6 w-6 text-white" />,
+    //   features: [
+    //     "Protocol selection",
+    //     "Market analysis",
+    //     "Automated execution",
+    //     "Cross-chain support"
+    //   ],
+    //   status: 'coming-soon',
+    //   href: '/trading-autopilot',
+    //   gradient: 'from-purple-500 to-pink-500'
+    // }
   ];
 
   return (

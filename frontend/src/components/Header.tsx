@@ -7,10 +7,13 @@ import Image from "next/image";
 
 // Navigation config
 const navigation = [
-  { name: "Batch Swapper", href: "/batch", available: false },
-  { name: "Auto DCA", href: "/autodca", available: false },
-  { name: "MEV Protected Trades", href: "/mev", available: false },
-  { name: "AI AgentX", href: "/agentx", available: false },
+  { name: "Home", href: "/", available: true },
+  { name: "Batch Swapper", href: "/batch", available: true },
+  // { name: "SAFU RESCUE", href: "/safu-rescue", available: true, emergency: true },
+  // { name: "Auto DCA", href: "/autodca", available: false },
+  // { name: "MEV Protected Trades", href: "/mev", available: false },
+  // { name: "AI AgentX", href: "/agentx", available: false },
+
 ];
 
 export default function Header() {
@@ -66,4 +69,3 @@ export default function Header() {
     </header>
   );
 }
-

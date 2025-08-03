@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import config from "@/modules/core/rainbowKitConfig";
 import { ThemeProvider } from "@/modules/core/theme";
+import { ChainProvider } from "@/modules/core/chainContext";
 import "@rainbow-me/rainbowkit/styles.css";
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -18,7 +19,9 @@ export function Providers({ children }: { children: ReactNode }) {
       <WagmiProvider config={config}>
         <QueryClientProvider client={queryClient}>
           <RainbowKitProvider>
-            {children}
+            <ChainProvider>
+              {children}
+            </ChainProvider>
           </RainbowKitProvider>
         </QueryClientProvider>
       </WagmiProvider>
