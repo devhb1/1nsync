@@ -5,7 +5,7 @@
 'use client';
 
 import React from 'react';
-import { EmergencyRescueMVP } from '@/modules/SAFU RESCUE ';
+import { EmergencyRescueMVP } from '@/modules/SAFU RESCUE /components/EmergencyRescueMVP';
 import { AlertTriangle, ArrowLeft, Shield } from 'lucide-react';
 import Link from 'next/link';
 

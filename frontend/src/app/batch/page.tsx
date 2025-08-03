@@ -1,4 +1,4 @@
-import { BatchSwapInterface } from '@/modules/batch-swapper/pages/BatchSwapperInterface';
+import { BatchSwapperInterface } from '@/modules/batch-swapper';
 
 export default function BatchPage() {
   return (
@@ -14,7 +14,7 @@ export default function BatchPage() {
           </p>
         </div>
         
-        <BatchSwapInterface />
+        <BatchSwapperInterface />
       </div>
     </div>
   );
