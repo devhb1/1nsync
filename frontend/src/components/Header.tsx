@@ -9,7 +9,7 @@ import Image from "next/image";
 const navigation = [
   { name: "Home", href: "/", available: true },
   { name: "Batch Swapper", href: "/batch", available: true },
-  // { name: "SAFU RESCUE", href: "/safu-rescue", available: true, emergency: true },
+  { name: "SAFU RESCUE", href: "/safu-rescue", available: true },
   // { name: "Auto DCA", href: "/autodca", available: false },
   // { name: "MEV Protected Trades", href: "/mev", available: false },
   // { name: "AI AgentX", href: "/agentx", available: false },

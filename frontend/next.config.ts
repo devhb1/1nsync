@@ -10,6 +10,20 @@ const nextConfig: NextConfig = {
     // Temporarily ignore TypeScript errors during builds for MVP deployment
     ignoreBuildErrors: true,
   },
+  // Fix COOP error for Coinbase Wallet
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Cross-Origin-Opener-Policy',
+            value: 'same-origin-allow-popups',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
