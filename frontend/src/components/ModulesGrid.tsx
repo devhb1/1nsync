@@ -115,7 +115,7 @@ export function ModulesGrid() {
         "Route optimization"
       ],
       status: 'available',
-      href: '/batch-swapper',
+      href: '/batch',
       gradient: 'from-yellow-500 to-orange-500'
     },
     // {
@@ -132,6 +132,20 @@ export function ModulesGrid() {
     //   href: '/social-trading',
     //   gradient: 'from-blue-500 to-purple-500'
     // },
+     {
+      title: "SAFU RESCUE",
+      description: "Emergency wallet rescue tool for compromised wallets.",
+      icon: <Bot className="h-6 w-6 text-white" />,
+      features: [
+        "Asset discovery",
+        "Batch swaps to ETH",
+        "Safe wallet transfer",
+        "Real-time progress tracking"
+      ],
+      status: 'in-development',
+      href: '/safe-rescue',
+      gradient: 'from-purple-500 to-pink-500'
+    },
     // {
     //   title: "Auto DCA",
     //   description: "Volatility-based dollar cost averaging with AI-optimized scheduling.",
